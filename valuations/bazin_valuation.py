@@ -1,6 +1,5 @@
-import sys
 import pandas as pd
-from src.data_extractor import fetch_statusinvest_data
+from utils import fetch_statusinvest_data
 
 def main():
     print("Buscando dados do StatusInvest...")
@@ -78,6 +77,8 @@ def main():
                 row = ativo_info.iloc[0]
                 print(f"[{entrada}]")
                 print(f"Cotação Atual        : R$ {row['Cotação']:.2f}")
+                print(f"Dividend Yield       : {row['Dividend Yield (%)']:.2f}%")
+                print(f"DPA (12m)            : R$ {row['DPA (12m)']:.2f}")
                 print(f"Preço Teto (Bazin)   : R$ {row['Preço Teto']:.2f}")
                 print(f"Margem de Segurança  : {row['Margem Segurança (%)']:.2f}%")
             else:
