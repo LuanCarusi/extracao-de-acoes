@@ -18,9 +18,12 @@ FILTROS_GERAIS = {
 # Você pode adicionar novos setores ou alterar as métricas conforme necessário
 FILTROS_POR_SETOR = {
     'Bancos': {
-        'p_l_max': 10.0,          # Bancos costumam ter P/L menor
+        'liquidezmediadiaria_min': 1_000_000,
+        'dy_min': 6.0,
+        'margemliquida_min': 4.9,
+        'p_l_max': 12.0,          # Bancos costumam ter P/L menor
         'roe_min': 12.0,          # Exigência de rentabilidade maior para bancos
-        'dy_min': 6.0             # Foco em dividendos
+
     },
     'Seguradoras': {
         'p_l_max': 12.0,
