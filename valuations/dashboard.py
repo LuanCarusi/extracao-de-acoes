@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 import math
+import os
 from utils import fetch_statusinvest_data, get_selic
 from datetime import datetime
 
@@ -122,14 +123,14 @@ def classificar_lynch(indicador):
     return "Fora do Range"
 
 # --- Header ---
-st.title("🚀 Dashboard Consolidado de Valuations")
-st.markdown("Compare diferentes metodologias de valuation (Damodaran, Bazin, Graham, Lynch) para uma mesma ação em tempo real.")
+st.title("🚀 Consolidação de Valuations")
+st.markdown("Compare diferentes metodologias de valuation (Damodaran, Bazin, Graham, Lynch).")
 
 # --- Inputs principais ---
 st.markdown('<div class="header-box">PARÂMETROS GERAIS</div>', unsafe_allow_html=True)
 col_input1, col_input2, col_input3, col_input4 = st.columns([2, 1, 1, 1])
 with col_input1:
-    ticker_input = st.text_input("Ticker da Ação (ex: TAEE11)", value="TAEE11").strip().upper()
+    ticker_input = st.text_input("Ticker da Ação (ex: BBSE3)", value="").strip().upper()
 with col_input2:
     selic_padrao = get_taxa_selic()
     taxa_desconto = st.number_input("Taxa de Desconto (%)", value=selic_padrao, step=0.1) / 100
@@ -174,7 +175,61 @@ c4.metric("Market Cap", f"R$ {market_cap_atual:,.2f}".replace(",", "X").replace(
 st.markdown("<br>", unsafe_allow_html=True)
 
 # Layout com Abas para cada Valuation
-tab1, tab2, tab3, tab4 = st.tabs(["Fluxo de Caixa Descontado (Damodaran)", "Preço Teto (Décio Bazin)", "Valor Intrínseco (Graham)", "Fair Value (Peter Lynch)"])
+tab_screening, tab1, tab2, tab3, tab4 = st.tabs(["🎯 Ranking (Oportunidades)", "Fluxo de Caixa Descontado (Damodaran)", "Preço Teto (Décio Bazin)", "Valor Intrínseco (Graham)", "Fair Value (Peter Lynch)"])
+
+# ==========================================
+# ABA 0: SCREENING (OPORTUNIDADES)
+# ==========================================
+with tab_screening:
+    st.markdown("### Ranking de Oportunidades (Screening Geral)")
+    st.markdown("Esta tabela exibe o resultado do processo de extração e filtragem do script `main.py` e serve como ponto de partida para escolher quais ações avaliar no Valuation.")
+    
+    # Função para executar o main.py
+    def rodar_main():
+        import subprocess
+        try:
+            if os.path.exists("../analise_de_acoes/main.py"):
+                subprocess.run(["python", "main.py"], cwd="../analise_de_acoes", check=True)
+            elif os.path.exists("analise_de_acoes/main.py"):
+                subprocess.run(["python", "main.py"], cwd="analise_de_acoes", check=True)
+            return True
+        except Exception as e:
+            return False
+
+    caminhos_possiveis = [
+        "../analise_de_acoes/ranking_acoes_resultado.csv",
+        "../ranking_acoes_resultado.csv",
+        "ranking_acoes_resultado.csv"
+    ]
+    
+    df_ranking = None
+    path_encontrado = None
+    for path in caminhos_possiveis:
+        if os.path.exists(path):
+            try:
+                df_ranking = pd.read_csv(path, sep=";", decimal=",", encoding="utf-8-sig")
+                path_encontrado = path
+                break
+            except Exception:
+                pass
+
+    col_btn1, col_btn2 = st.columns([2, 8])
+    with col_btn1:
+        if st.button("🔄 Atualizar / Gerar Ranking"):
+            with st.spinner("Analisando o mercado e gerando ranking... Isso pode levar alguns segundos."):
+                if rodar_main():
+                    st.success("Ranking atualizado!")
+                    st.rerun()
+                else:
+                    st.error("Falha ao atualizar o ranking.")
+                
+    if df_ranking is not None and not df_ranking.empty:
+        st.success(f"Ranking carregado com sucesso! ({len(df_ranking)} empresas encontradas)")
+        st.dataframe(df_ranking, hide_index=True, use_container_width=True)
+        st.info("💡 **Dica:** Utilize os Tickers acima no campo 'Ticker da Ação' para calcular o Valuation detalhado.")
+    else:
+        st.warning("⚠️ Arquivo de ranking não encontrado.")
+        st.info("Clique no botão **Atualizar / Gerar Ranking** acima para extrair os dados e calcular o score das ações agora mesmo.")
 
 # ==========================================
 # ABA 1: DAMODARAN
@@ -186,7 +241,7 @@ with tab1:
         st.markdown("### Modelo de Damodaran (DCF)")
         
         current_year = df_hist['Ano'].iloc[-1] + 1
-        projetados_anos = [current_year + i for i in range(6)]
+        projetados_anos = [current_year + i for i in range(4)]
 
         if 'cagrs' not in st.session_state or st.session_state.get('last_ticker') != ticker_input:
             st.session_state.cagrs = {ano: 5.0 for ano in projetados_anos}
@@ -283,7 +338,6 @@ with tab1:
             st.dataframe(df_full, hide_index=True, use_container_width=True)
 
         with col_esq:
-            st.markdown('#### Resultado (Damodaran)')
             
             market_cap_projetado = sum(vpl_calculado) + vpl_perpetuo
             preco_teto_damo = market_cap_projetado / num_acoes
