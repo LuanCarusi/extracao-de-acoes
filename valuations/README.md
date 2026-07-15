@@ -6,7 +6,7 @@ A extração de dados é centralizada no arquivo `utils.py`, garantindo que os s
 
 ## Requisitos e Ambiente Virtual (VENV)
 
-Para garantir que tudo funcione perfeitamente e resolver problemas como "ModuleNotFoundError", recomendamos fortemente o uso de um Ambiente Virtual.
+Para garantir que tudo funcione perfeitamente e resolver problemas como "ModuleNotFoundError", recomendo fortemente o uso de um Ambiente Virtual.
 
 Abra o seu terminal (Powershell ou Prompt de Comando) dentro da pasta `valuations` e execute os comandos abaixo **uma única vez** para criar o ambiente e instalar as bibliotecas:
 

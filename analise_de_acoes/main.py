@@ -22,40 +22,83 @@ def main():
     start_time = time.time()
     logger.info("Iniciando o processo de Screening de Ações...")
     
-    # 1. Extração Inicial (Síncrono pois é uma única requisição com todos os dados)
+    # 1. Extração Inicial 
     df_raw = fetch_statusinvest_data()
     if df_raw.empty:
         logger.error("Nenhum dado retornado do StatusInvest. Encerrando processo.")
         return
         
-    # 2. Inicializa o Analisador
-    analyzer = StockAnalyzer(df_raw)
+    # 2. Busca os Setores de forma Assíncrona para TODOS os ativos logo no início
+    # Isso garante que não excluímos Bancos/Seguradoras indevidamente
+    tickers = df_raw['ticker'].tolist()
     
-    # 3. Aplica Filtros Gerais (Reduz a base para buscar setor apenas do que importa)
-    df_filtrado = analyzer.aplicar_filtros_gerais()
-    
-    if df_filtrado.empty:
-        logger.warning("Nenhuma ação passou pelos filtros gerais.")
-        return
-        
-    # 4. Busca os Setores de forma Assíncrona (Apenas para as ações filtradas, otimizando muito)
-    tickers = df_filtrado['ticker'].tolist()
     # O asyncio.run orquestra as chamadas assíncronas
     df_setores = asyncio.run(fetch_all_sectors(tickers))
     
-    # Faz o merge para adicionar a coluna de setor
-    df_filtrado = df_filtrado.merge(df_setores, on="ticker", how="left")
+    # Faz o merge para adicionar a coluna de setor na base crua
+    df_raw = df_raw.merge(df_setores, on="ticker", how="left")
     
-    # 5. Aplica Filtros Específicos por Setor (Ex: Bancos, Seguradoras)
-    df_filtrado = analyzer.aplicar_filtros_por_setor(df_filtrado)
+    # 3. Separa os DataFrames por Setor
+    # Aqui separamos Bancos e Seguradoras do resto.
+    is_banco = df_raw['setor'] == 'Bancos'
+    is_seguradora = df_raw['setor'].isin(['Seguradoras', 'Corretoras de Seguros', 'Previdência e Seguros'])
     
-    # 6. Calcula Rankings e Score Final
-    df_final = analyzer.calcular_rankings(df_filtrado)
+    df_bancos = df_raw[is_banco].copy()
+    df_seguradoras = df_raw[is_seguradora].copy()
+    df_geral = df_raw[~(is_banco | is_seguradora)].copy()
+    
+    logger.info(f"Separação concluída: {len(df_bancos)} Bancos, {len(df_seguradoras)} Seguradoras, {len(df_geral)} Outros Setores.")
+    
+    # 4. Inicializa o Analisador
+    analyzer = StockAnalyzer(df_raw) # O dataframe interno dele não será usado diretamente agora
+    
+    # 5. Processamento Independente (Pipelines)
+    df_bancos_processado = analyzer.processar_bancos(df_bancos)
+    df_seguradoras_processado = analyzer.processar_seguradoras(df_seguradoras)
+    df_geral_processado = analyzer.processar_geral(df_geral)
+    
+    # 6. Combinação Final
+    dfs_to_concat = []
+    if not df_bancos_processado.empty:
+        dfs_to_concat.append(df_bancos_processado)
+    if not df_seguradoras_processado.empty:
+        dfs_to_concat.append(df_seguradoras_processado)
+    if not df_geral_processado.empty:
+        dfs_to_concat.append(df_geral_processado)
+        
+    if not dfs_to_concat:
+        logger.warning("Nenhuma ação sobrou após os filtros!")
+        return
+        
+    df_final = pd.concat(dfs_to_concat, ignore_index=True)
+    
+    # Ordena o DataFrame final pelo Score Final de forma crescente (menor percentil é o melhor)
+    df_final = df_final.sort_values(by="score_final", ascending=True).reset_index(drop=True)
+    
+    # Transforma a média dos percentis na posição final do ranking (1º, 2º, etc)
+    df_final["score_final"] = df_final.index + 1
+    
+    # Renomeia as colunas para um formato de apresentação elegante
+    mapa_colunas = {
+        "companyname": "Empresa",
+        "ticker": "Ticker",
+        "setor": "Setor",
+        "price": "Cotação",
+        "dy": "Dividend Yield",
+        "p_l": "P/L",
+        "margemliquida": "Margem Líquida",
+        "dividaliquidaebit": "Divida Líquida/EBIT",
+        "roe": "ROE",
+        "roic": "ROIC",
+        "liquidezmediadiaria": "Liquidez Média Diária",
+        "score_final": "Posição"
+    }
+    df_final = df_final.rename(columns=mapa_colunas)
     
     # Formata a exibição do pandas para ver todas as colunas no console
     pd.set_option('display.max_columns', None)
     pd.set_option('display.width', 1000)
-    pd.set_option('display.max_rows', 100)
+    pd.set_option('display.max_rows', 200)
     
     # 7. Resultado Final
     logger.info(f"Processo finalizado com sucesso! Tempo total: {time.time() - start_time:.2f} segundos.")

@@ -1,9 +1,9 @@
 """
 Módulo de Configuração
-Define os filtros globais e específicos por setor.
+Define os filtros globais e as regras específicas para Bancos.
 """
 
-# Filtros Gerais aplicados a todas as empresas inicialmente
+# Filtros Gerais (Aplicados apenas à tabela Geral, excluindo bancos)
 FILTROS_GERAIS = {
     'liquidezmediadiaria_min': 1_000_000,
     'roic_min': 7.9,
@@ -14,32 +14,23 @@ FILTROS_GERAIS = {
     'roe_min': 9.5
 }
 
-# Filtros Específicos por Setor (Sobrescrevem ou adicionam aos filtros gerais)
-# Você pode adicionar novos setores ou alterar as métricas conforme necessário
-FILTROS_POR_SETOR = {
-    'Bancos': {
-        'liquidezmediadiaria_min': 1_000_000,
-        'dy_min': 6.0,
-        'margemliquida_min': 4.9,
-        'p_l_max': 12.0,          # Bancos costumam ter P/L menor
-        'roe_min': 12.0,          # Exigência de rentabilidade maior para bancos
-
-    },
-    'Seguradoras': {
-        'p_l_max': 12.0,
-        'roe_min': 15.0,
-        'dy_min': 5.5
-    },
-    'Corretoras de seguros': {
-        'p_l_max': 15.0,
-        'roe_min': 15.0
-    }
+# Filtros Específicos para Bancos (Aplicados de forma isolada)
+FILTROS_BANCOS = {
+    'liquidezmediadiaria_min': 1_000_000,
+    'roe_min': 8.0,
+    'p_l_max': 13.0,
+    'dy_min': 6.0
 }
 
-# Indicadores que compõem o Score Final e sua direção de rankeamento
+# Filtros Específicos para Seguradoras (Aplicados de forma isolada)
+FILTROS_SEGURADORAS = {
+    'liquidezmediadiaria_min': 1_000_000
+}
+
+# Indicadores que compõem o Score Final GERAL e sua direção de rankeamento
 # True = Ordem crescente (menor é melhor, ex: P/L, Dívida)
 # False = Ordem decrescente (maior é melhor, ex: DY, ROE, Margem Líquida)
-RANKING_METRICS = {
+RANKING_METRICS_GERAL = {
     'dy': False,
     'p_l': True,
     'margemliquida': False,
@@ -47,7 +38,22 @@ RANKING_METRICS = {
     'roe': False
 }
 
-# Colunas finais a serem exibidas no relatório
+# Indicadores que compõem o Score Final de BANCOS e sua direção
+RANKING_METRICS_BANCOS = {
+    'roe': False,
+    'dy': False,
+    'p_l': True,
+    'margemliquida': False
+}
+
+# Indicadores que compõem o Score Final de SEGURADORAS e sua direção
+RANKING_METRICS_SEGURADORAS = {
+    'dy': False,
+    'p_l': True,
+    'roe': False
+}
+
+# Colunas finais a serem exibidas no relatório e combinadas no final
 COLUNAS_FINAIS = [
     "companyname",
     "ticker",
