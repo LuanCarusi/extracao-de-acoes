@@ -70,16 +70,30 @@ python lynch_valuation.py
 ### 4. Valuation DCF - Fluxo de Caixa Livre de Damodaran (`damodaran_valuation.py`)
 Baseado na metodologia acadêmica e profunda de Aswath Damodaran. Este valuation projeta o crescimento do caixa de uma empresa nos próximos 6 anos e o desconta a valor presente (VPL).
 
-Por ser complexo e dinâmico, este código **não roda no terminal de texto**. Ele abre uma **Interface Web (Dashboard)** linda, futurista e interativa no seu navegador.
-- Busca automaticamente o **Market Cap** e a **Cotação Atual** pelo StatusInvest.
-- Busca o histórico dos últimos 4 anos de **Free Cash Flow (FCF)** direto do Yahoo Finance.
-- Permite que você edite o **CAGR** (crescimento projetado) ano a ano na tabela.
-- Os cálculos de Valor Presente Livre, Valor Perpétuo, Upside/Downside e Preço Teto se **atualizam em tempo real** conforme você altera as premissas.
-
-**Para executar (Atenção ao comando diferente):**
+**Para executar (Interface Web):**
 ```bash
 streamlit run damodaran_valuation.py
 ```
+
+### 5. Dashboard Consolidado de Valuations (`dashboard.py`) **[RECOMENDADO]**
+Este é o aplicativo definitivo que unifica as 4 metodologias acima (Damodaran, Bazin, Graham e Lynch) em uma única tela interativa.
+
+Por ser visual e dinâmico, este código **não roda no terminal de texto**. Ele abre uma **Interface Web** linda, futurista e interativa no seu navegador.
+
+**Como Usar o Dashboard:**
+1. No seu terminal, com o ambiente virtual ativado, digite o comando abaixo e pressione Enter:
+   ```bash
+   streamlit run dashboard.py
+   ```
+2. Uma nova aba se abrirá automaticamente no seu navegador.
+3. No painel superior ("Parâmetros Gerais"), digite o **Ticker da Ação** (ex: `TAEE11`, `BBAS3`).
+4. Ajuste os demais parâmetros se desejar (Taxa de Desconto, Perpetuidade, Crescimento para o modelo de Lynch).
+5. O sistema buscará instantaneamente a cotação e os dados fundamentalistas no StatusInvest, e o histórico de Fluxo de Caixa no Yahoo Finance.
+6. Navegue pelas **Abas** para comparar a mesma ação sob a ótica de diferentes grandes investidores:
+   - **Damodaran**: Edite o CAGR (%) na tabela para projetar o futuro da empresa. FCL e VPL são calculados automaticamente.
+   - **Décio Bazin**: Veja o Preço Teto baseado em dividendos projetados.
+   - **Benjamin Graham**: Descubra o Valor Intrínseco baseado em Lucros e Patrimônio.
+   - **Peter Lynch**: Analise o Fair Value relacionando Dividendos, Crescimento e P/L.
 
 ## Modo Interativo (Scripts de Terminal)
 
