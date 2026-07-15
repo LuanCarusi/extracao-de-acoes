@@ -4,17 +4,28 @@ Este diretório contém scripts independentes para realizar cálculos de *valuat
 
 A extração de dados é centralizada no arquivo `utils.py`, garantindo que os scripts desta pasta sejam independentes do resto do projeto de Screening Geral.
 
-## Requisitos
+## Requisitos e Ambiente Virtual (VENV)
 
-Antes de rodar os scripts, garanta que você tem as bibliotecas necessárias instaladas. Você pode instalá-las usando o `pip`:
+Para garantir que tudo funcione perfeitamente e resolver problemas como "ModuleNotFoundError", recomendamos fortemente o uso de um Ambiente Virtual.
+
+Abra o seu terminal (Powershell ou Prompt de Comando) dentro da pasta `valuations` e execute os comandos abaixo **uma única vez** para criar o ambiente e instalar as bibliotecas:
 
 ```bash
-pip install pandas requests
+# 1. Cria o ambiente virtual chamado "venv"
+python -m venv venv
+
+# 2. Ativa o ambiente virtual (no Windows)
+.\venv\Scripts\activate
+
+# 3. Instala todas as dependências isoladamente
+pip install -r requirements.txt
 ```
+
+> **Atenção:** Sempre que você abrir um terminal novo para rodar os códigos ou o Streamlit, lembre-se de rodar `.\venv\Scripts\activate` antes. Você saberá que deu certo pois aparecerá um `(venv)` no começo da linha do seu terminal.
 
 ## Como Usar os Códigos
 
-Para executar qualquer um dos códigos de valuation, abra seu terminal (Prompt de Comando ou PowerShell), navegue até esta pasta e execute o script desejado usando o Python.
+Para executar qualquer um dos códigos de valuation pelo terminal, abra seu terminal (Prompt de Comando ou PowerShell), navegue até esta pasta e execute o script desejado usando o Python.
 
 ### 1. Preço-teto do Bazin (`bazin_valuation.py`)
 Baseado no método de Décio Bazin, foca em empresas que pagam bons dividendos.
@@ -56,9 +67,23 @@ Baseado na métrica de Fair Value de Peter Lynch, que avalia o quão "barata" ou
 python lynch_valuation.py
 ```
 
-## Modo Interativo
+### 4. Valuation DCF - Fluxo de Caixa Livre de Damodaran (`damodaran_valuation.py`)
+Baseado na metodologia acadêmica e profunda de Aswath Damodaran. Este valuation projeta o crescimento do caixa de uma empresa nos próximos 6 anos e o desconta a valor presente (VPL).
 
-Todos os scripts possuem um modo interativo. Após exibirem o ranking no terminal e salvarem um arquivo `.csv` correspondente, eles apresentarão um prompt:
+Por ser complexo e dinâmico, este código **não roda no terminal de texto**. Ele abre uma **Interface Web (Dashboard)** linda, futurista e interativa no seu navegador.
+- Busca automaticamente o **Market Cap** e a **Cotação Atual** pelo StatusInvest.
+- Busca o histórico dos últimos 4 anos de **Free Cash Flow (FCF)** direto do Yahoo Finance.
+- Permite que você edite o **CAGR** (crescimento projetado) ano a ano na tabela.
+- Os cálculos de Valor Presente Livre, Valor Perpétuo, Upside/Downside e Preço Teto se **atualizam em tempo real** conforme você altera as premissas.
+
+**Para executar (Atenção ao comando diferente):**
+```bash
+streamlit run damodaran_valuation.py
+```
+
+## Modo Interativo (Scripts de Terminal)
+
+Todos os scripts de terminal (Bazin, Graham e Lynch) possuem um modo interativo no final de sua execução. Após exibirem o ranking no terminal e salvarem um arquivo `.csv` correspondente, eles apresentarão um prompt:
 `Ativo: `
 
 Nele, você pode digitar o código da ação (ex: `BBAS3`, `VALE3`) para ver os indicadores e as margens de segurança específicos daquele ativo, mesmo que não estejam no topo do ranking.
