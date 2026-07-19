@@ -1,17 +1,17 @@
 # Valuations de Ações
 
-Este diretório contém scripts independentes para realizar cálculos de *valuation* (avaliação de empresas) utilizando dados do mercado brasileiro extraídos em tempo real do site StatusInvest. 
+Este diretório contém scripts para realizar cálculos de *valuation* (decisão do preço justo de uma empresa) utilizando dados extraídos em tempo real do site StatusInvest. 
 
 A extração de dados é centralizada no arquivo `utils.py`, garantindo que os scripts desta pasta sejam independentes do resto do projeto de Screening Geral.
 
 ## Requisitos e Ambiente Virtual (VENV)
 
-Para garantir que tudo funcione perfeitamente e resolver problemas como "ModuleNotFoundError", recomendo fortemente o uso de um Ambiente Virtual.
+Para garantir o bom funcionamento do código, recomendo fortemente o uso de um Ambiente Virtual.
 
-Abra o seu terminal (Powershell ou Prompt de Comando) dentro da pasta `valuations` e execute os comandos abaixo **uma única vez** para criar o ambiente e instalar as bibliotecas:
+Abra o seu terminal dentro da pasta `valuations` e execute os comandos abaixo para criar o ambiente e instalar as bibliotecas:
 
 ```bash
-# 1. Cria o ambiente virtual chamado "venv"
+# 1. Cria o ambiente virtual
 python -m venv venv
 
 # 2. Ativa o ambiente virtual (no Windows)
@@ -21,11 +21,11 @@ python -m venv venv
 pip install -r requirements.txt
 ```
 
-> **Atenção:** Sempre que você abrir um terminal novo para rodar os códigos ou o Streamlit, lembre-se de rodar `.\venv\Scripts\activate` antes. Você saberá que deu certo pois aparecerá um `(venv)` no começo da linha do seu terminal.
+> **Atenção:** Sempre que você abrir um terminal novo para rodar os códigos ou o Streamlit, lembre-se de rodar `.\venv\Scripts\activate` antes.
 
 ## Como Usar os Códigos
 
-Para executar qualquer um dos códigos de valuation pelo terminal, abra seu terminal (Prompt de Comando ou PowerShell), navegue até esta pasta e execute o script desejado usando o Python.
+Para executar qualquer um dos códigos de valuation pelo terminal, navegue até esta pasta e execute o script desejado usando o Python.
 
 ### 1. Preço-teto do Bazin (`bazin_valuation.py`)
 Baseado no método de Décio Bazin, foca em empresas que pagam bons dividendos.
@@ -75,19 +75,17 @@ Baseado na metodologia acadêmica e profunda de Aswath Damodaran. Este valuation
 streamlit run damodaran_valuation.py
 ```
 
-### 5. Dashboard Consolidado de Valuations (`dashboard.py`) **[RECOMENDADO]**
-Este é o aplicativo definitivo que unifica as 4 metodologias acima (Damodaran, Bazin, Graham e Lynch) em uma única tela interativa.
-
-Por ser visual e dinâmico, este código **não roda no terminal de texto**. Ele abre uma **Interface Web** linda, futurista e interativa no seu navegador.
+### 5. Dashboard Consolidado de Valuations (`dashboard.py`)
+Este é o aplicativo definitivo que unifica as 4 metodologias acima (Damodaran, Bazin, Graham e Lynch).
 
 **Como Usar o Dashboard:**
-1. No seu terminal, com o ambiente virtual ativado, digite o comando abaixo e pressione Enter:
+1. No seu terminal, digite o comando abaixo:
    ```bash
    streamlit run dashboard.py
    ```
 2. Uma nova aba se abrirá automaticamente no seu navegador.
-3. No painel superior ("Parâmetros Gerais"), digite o **Ticker da Ação** (ex: `TAEE11`, `BBAS3`).
-4. Ajuste os demais parâmetros se desejar (Taxa de Desconto, Perpetuidade, Crescimento para o modelo de Lynch).
+3. No painel superior ("Parâmetros Gerais"), digite o **Ticker da Ação** (ex: `TAEE11`, `bbas3`).
+4. Ajuste os parâmetros se desejar (Taxa de Desconto, Perpetuidade, Crescimento para o modelo de Lynch).
 5. O sistema buscará instantaneamente a cotação e os dados fundamentalistas no StatusInvest, e o histórico de Fluxo de Caixa no Yahoo Finance.
 6. Navegue pelas **Abas** para comparar a mesma ação sob a ótica de diferentes grandes investidores:
    - **Damodaran**: Edite o CAGR (%) na tabela para projetar o futuro da empresa. FCL e VPL são calculados automaticamente.
