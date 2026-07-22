@@ -232,6 +232,17 @@ with tab_screening:
                     st.error("Falha ao executar o main.py.")
 
     if df_ranking is not None and not df_ranking.empty:
+        # Filtro de Setor
+        if 'Setor' in df_ranking.columns:
+            setores = sorted(df_ranking['Setor'].dropna().unique().tolist())
+            filtro_setor = st.multiselect(
+                "Filtrar por Setor (Opcional):",
+                options=setores,
+                default=[]
+            )
+            if filtro_setor:
+                df_ranking = df_ranking[df_ranking['Setor'].isin(filtro_setor)]
+                
         st.success(f"Ranking carregado! ({len(df_ranking)} empresas encontradas)")
         st.dataframe(df_ranking, hide_index=True, use_container_width=True)
         st.info("💡 **Dica:** Copie o Ticker acima e cole no campo de busca para calcular o Valuation.")
