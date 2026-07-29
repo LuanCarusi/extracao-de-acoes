@@ -194,6 +194,7 @@ with tab_screening:
 
     def rodar_main():
         import subprocess
+        import sys
         caminhos_main = [
             ("../analise_de_acoes/main.py", "../analise_de_acoes"),
             ("analise_de_acoes/main.py",    "analise_de_acoes"),
@@ -201,11 +202,13 @@ with tab_screening:
         for arq, cwd in caminhos_main:
             if os.path.exists(arq):
                 try:
-                    subprocess.run(["python", "main.py"], cwd=cwd, check=True)
-                    return True
-                except Exception:
-                    pass
-        return False
+                    result = subprocess.run([sys.executable, "main.py"], cwd=cwd, check=True, capture_output=True, text=True)
+                    return True, ""
+                except subprocess.CalledProcessError as e:
+                    return False, f"Erro ao executar main.py (código {e.returncode}):\n{e.stderr}"
+                except Exception as e:
+                    return False, f"Erro inesperado: {str(e)}"
+        return False, "Arquivo main.py não encontrado."
 
     caminhos_csv = [
         "../analise_de_acoes/ranking_acoes_resultado.csv",
@@ -225,11 +228,12 @@ with tab_screening:
     with col_btn1:
         if st.button("🔄 Atualizar / Gerar Ranking"):
             with st.spinner("Analisando o mercado... Isso pode levar alguns segundos."):
-                if rodar_main():
+                sucesso, msg_erro = rodar_main()
+                if sucesso:
                     st.success("Ranking atualizado!")
                     st.rerun()
                 else:
-                    st.error("Falha ao executar o main.py.")
+                    st.error(msg_erro)
 
     if df_ranking is not None and not df_ranking.empty:
         # Filtro de Setor

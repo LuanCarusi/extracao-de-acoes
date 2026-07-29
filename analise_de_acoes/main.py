@@ -5,10 +5,15 @@ Orquestra o processo de extração, limpeza, enriquecimento assíncrono e rankea
 
 import asyncio
 import logging
+import sys
 import time
 import pandas as pd
 from src.data_extractor import fetch_statusinvest_data, fetch_all_sectors
 from src.analyzer import StockAnalyzer
+
+# Correção para evitar RuntimeError (Event loop is closed) no Windows com asyncio
+if sys.platform == 'win32':
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 # Configuração profissional de logging
 logging.basicConfig(
