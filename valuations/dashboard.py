@@ -201,7 +201,7 @@ def formatar_grandeza(valor):
         sufixo = ""
 
     # Formata com 2 casas decimais e troca ponto por vírgula
-    num_str = f"{numero:.2f}".replace(".", ",")
+    num_str = f"{numero:.1f}".replace(".", ",")
     
     # Limpa zeros desnecessários (ex: de "13,00 bilhões" para "13 bilhões")
     if num_str.endswith(",00"):
@@ -459,39 +459,39 @@ if ticker_input:
                     st.markdown('<h4>📋 Histórico de Cenários Salvos</h4>', unsafe_allow_html=True)
                     df_cenarios = pd.DataFrame(st.session_state.cenarios_salvos)
                     
-                    # Formatando para visualização
+                    # Cria cópia do histórico mantendo os números puros
                     df_view = df_cenarios.copy()
-                    cols_moeda = ["Preço Teto", "Lucro Proj", "Cotação"]
-                    cols_perc = ["Margem (%)", "Yield Proj (%)", "Payout"]
                     
-                    for col in cols_moeda:
+                    # Funções de formatação visual
+                    formato_moeda = lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                    formato_perc = lambda x: f"{x:.2f}%"
+                    
+                    # Dicionário mapeando as colunas para suas respectivas formatações
+                    formatadores = {}
+                    for col in ["Preço Teto", "Lucro Proj", "Cotação"]:
                         if col in df_view.columns:
-                            df_view[col] = df_view[col].apply(lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-                    for col in cols_perc:
+                            formatadores[col] = formato_moeda
+                    for col in ["Margem (%)", "Yield Proj (%)", "Payout"]:
                         if col in df_view.columns:
-                            df_view[col] = df_view[col].apply(lambda x: f"{x:.2f}%")
-                            
-                    # Função para colorir a célula baseada no valor
+                            formatadores[col] = formato_perc
+
+                    # Nova função de cor (muito mais simples, pois agora recebe o número real, sem precisar remover o '%')
                     def colorir_margem(valor):
-                        try:
-                            # Remove o '%' para transformar de volta em número e checar o sinal
-                            val_num = float(valor.replace('%', ''))
-                            if val_num > 0:
-                                return 'color: #3fb950; font-weight: 600;' # Verde (metric-value-green)
-                            elif val_num < 0:
-                                return 'color: #f85149; font-weight: 600;' # Vermelho (metric-value-red)
-                            return ''
-                        except:
-                            return ''
+                        if pd.isna(valor): return ''
+                        if valor > 0:
+                            return 'color: #3fb950; font-weight: 600;' # Verde
+                        elif valor < 0:
+                            return 'color: #f85149; font-weight: 600;' # Vermelho
+                        return ''
 
-                    # Aplica o estilo na coluna específica (usa try/except para garantir compatibilidade com qualquer versão do Pandas)
+                    # Aplica o formato dos textos E as cores de uma vez só na camada visual
                     try:
-                        df_estilizado = df_view.style.map(colorir_margem, subset=["Margem (%)"])
+                        df_estilizado = df_view.style.format(formatadores).map(colorir_margem, subset=["Margem (%)"])
                     except AttributeError:
-                        # Fallback para versões do Pandas anteriores à 2.1.0
-                        df_estilizado = df_view.style.applymap(colorir_margem, subset=["Margem (%)"])
-
-                    # Renderiza o dataframe já com as regras de cores aplicadas
+                        # Fallback para versões mais antigas do Pandas
+                        df_estilizado = df_view.style.format(formatadores).applymap(colorir_margem, subset=["Margem (%)"])
+                        
+                    # Renderiza a tabela já com ordenação numérica funcionando e colorida
                     st.dataframe(df_estilizado, hide_index=True, use_container_width=True)
                     
                     if st.button("🗑️ Limpar Histórico"):
