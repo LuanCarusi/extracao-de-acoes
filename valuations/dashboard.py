@@ -519,3 +519,71 @@ if ticker_input:
                             render_metric_row("Preço Justo (DCF)", format_brl(preco_justo_damo), "metric-value-green")
                         with c_r3:
                             render_metric_row("Upside / Downside", format_perc(margem_damo * 100), get_color_class(margem_damo))
+                            
+                    st.markdown("<hr style='border-color: #30363d; margin: 20px 0;'>", unsafe_allow_html=True)
+                    st.markdown("#### Tabela Consolidada (Histórico + Projeções)")
+                    
+                    # -- Histórico: calcula CAGR YoY entre os anos reais --
+                    hist_anos  = df_hist_ni['Ano'].tolist()
+                    hist_lls   = df_hist_ni['Lucro Líquido'].tolist()
+                    hist_cagrs = []
+                    for i, v in enumerate(hist_lls):
+                        if i == 0:
+                            hist_cagrs.append(None)
+                        else:
+                            prev = hist_lls[i - 1]
+                            hist_cagrs.append(((v / prev) - 1) * 100 if prev > 0 else None)
+
+                    rows_hist = []
+                    for i in range(len(hist_anos)):
+                        rows_hist.append({
+                            'Ano':           str(hist_anos[i]),
+                            'Tipo':          'Histórico',
+                            'Lucro Líquido': hist_lls[i],
+                            'CAGR (%)':      hist_cagrs[i],
+                            'VPL':           None
+                        })
+
+                    # -- Ano Atual (input): CAGR vs último histórico --
+                    cagr_atual = ((ll_atual / ultimo_ll_proj_base) - 1) * 100 if ultimo_ll_proj_base > 0 else None
+                    rows_atual = [{
+                        'Ano':           str(ano_atual),
+                        'Tipo':          'Atual (Input)',
+                        'Lucro Líquido': ll_atual,
+                        'CAGR (%)':      cagr_atual,
+                        'VPL':           None
+                    }]
+
+                    # -- Anos Projetados --
+                    rows_proj = []
+                    for idx, ano in enumerate(anos_projetados):
+                        rows_proj.append({
+                            'Ano':           str(ano),
+                            'Tipo':          'Projetado',
+                            'Lucro Líquido': ll_proj[idx],
+                            'CAGR (%)':      st.session_state[state_key_cagr][ano],
+                            'VPL':           vpls[idx]
+                        })
+
+                    # -- Perpétuo (última linha) --
+                    row_perp = [{
+                        'Ano':           'Perpétuo',
+                        'Tipo':          'Perpetuidade',
+                        'Lucro Líquido': tv,
+                        'CAGR (%)':      taxa_perp * 100,
+                        'VPL':           vpl_perp
+                    }]
+
+                    df_full = pd.DataFrame(rows_hist + rows_atual + rows_proj + row_perp)
+
+                    # Formatação para exibição
+                    df_disp = df_full.copy()
+                    df_disp['Lucro Líquido'] = df_disp['Lucro Líquido'].apply(format_brl)
+                    df_disp['VPL']           = df_disp['VPL'].apply(format_brl)
+                    df_disp['CAGR (%)']      = df_disp['CAGR (%)'].apply(format_perc)
+
+                    st.dataframe(
+                        df_disp[['Ano', 'Tipo', 'Lucro Líquido', 'CAGR (%)', 'VPL']],
+                        hide_index=True,
+                        use_container_width=True
+                    )
