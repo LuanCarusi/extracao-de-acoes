@@ -29,31 +29,10 @@ def local_css():
             max-width: 95%;
         }
 
-        h1, h2, h3 {
+        h1, h2, h3, h4 {
             font-weight: 600;
             color: #ffffff;
             margin-bottom: 1rem;
-        }
-        
-        /* Cards style */
-        .valuation-card {
-            background-color: #161b22;
-            border: 1px solid #30363d;
-            border-radius: 8px;
-            padding: 1.5rem;
-            height: 100%;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        
-        .card-header {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #ffffff;
-            border-bottom: 1px solid #30363d;
-            padding-bottom: 0.8rem;
-            margin-bottom: 1.2rem;
-            display: flex;
-            align-items: center;
         }
         
         .metric-row {
@@ -69,12 +48,12 @@ def local_css():
         }
         
         .metric-label {
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             color: #8b949e;
         }
         
         .metric-value {
-            font-size: 1rem;
+            font-size: 1.05rem;
             font-weight: 500;
             color: #ffffff;
         }
@@ -117,7 +96,15 @@ def local_css():
             border: none;
         }
 
-        /* Expander style */
+        /* Estilização para st.container(border=True) nativo do Streamlit */
+        div[data-testid="stVerticalBlockBorderWrapper"] {
+            border-radius: 8px;
+            border: 1px solid #30363d;
+            background-color: #161b22;
+            padding: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
         .streamlit-expanderHeader {
             background-color: #161b22;
             border-radius: 6px;
@@ -204,8 +191,9 @@ def render_metric_row(label, value, color_class="", tooltip=None):
     </div>
     """, unsafe_allow_html=True)
 
-# 1. EXPANDER DE RANKING (SCREENING)
-with st.expander("🎯 Ranking de Oportunidades (Screening Automático)", expanded=False):
+
+# 1. RANKING (SCREENING) - Agora aberto por padrão (expanded=True)
+with st.expander("🎯 Ranking de Oportunidades (Screening Automático)", expanded=True):
     st.markdown("Extraia e filtre os melhores ativos do mercado baseados nas suas regras de negócio.")
     
     def rodar_main():
@@ -272,7 +260,6 @@ if ticker_input:
         market_cap_atual = float(row.get('valormercado', 0) or 0)
         num_acoes = market_cap_atual / cotacao_atual if cotacao_atual > 0 and market_cap_atual > 0 else 0
         
-        # Variáveis globais para os modelos
         dy_atual = float(row.get('dy', 0) or 0)
         vpa = float(row.get('vpa', 0) or 0)
         lpa = float(row.get('lpa', 0) or 0)
@@ -283,198 +270,227 @@ if ticker_input:
             df_hist_ni, payout_medio_hist = get_historical_net_income(ticker_input)
             tem_dados_damodaran = df_hist_ni is not None and not df_hist_ni.empty
 
-        # ---------------------------------------------------------
-        # GRID LINHA 1: BAZIN, GRAHAM, PETER LYNCH
-        # ---------------------------------------------------------
-        col_bazin, col_graham, col_lynch = st.columns(3)
+        # Separa Damodaran em uma aba e o restante em outra
+        tab_main, tab_damo = st.tabs(["📊 Dashboard Consolidado", "💸 Valuation Fluxo de Caixa (Damodaran)"])
         
-        # -- CARD BAZIN --
-        with col_bazin:
-            st.markdown('<div class="valuation-card">', unsafe_allow_html=True)
-            st.markdown('<div class="card-header">📊 Valuation Bazin</div>', unsafe_allow_html=True)
+        with tab_main:
+            # ---------------------------------------------------------
+            # GRID LINHA 1: BAZIN, GRAHAM, PETER LYNCH
+            # ---------------------------------------------------------
+            col_bazin, col_graham, col_lynch = st.columns(3)
             
-            dpa_atual = cotacao_atual * (dy_atual / 100)
-            render_metric_row("Dividend Yield (12m)", format_perc(dy_atual))
-            render_metric_row("DPA (12m)", format_brl(dpa_atual))
-            
-            dy_desejado_bazin = st.number_input("Dividend Yield Desejado (%)", min_value=0.1, value=6.0, step=0.5, key="bazin_dy")
-            
-            preco_teto_bazin = dpa_atual / (dy_desejado_bazin / 100) if dy_desejado_bazin > 0 else 0
-            margem_bazin = (preco_teto_bazin - cotacao_atual) / cotacao_atual if cotacao_atual > 0 else 0
-            
-            st.markdown("<hr style='border-color: #30363d; margin: 15px 0;'>", unsafe_allow_html=True)
-            render_metric_row("Preço Teto do Bazin", format_brl(preco_teto_bazin), "metric-value-green")
-            render_metric_row("Margem de Segurança", format_perc(margem_bazin * 100), get_color_class(margem_bazin))
-            
-            st.markdown('</div>', unsafe_allow_html=True)
+            # -- CARD BAZIN --
+            with col_bazin:
+                with st.container(border=True):
+                    st.markdown('<h4>📊 Valuation Bazin</h4>', unsafe_allow_html=True)
+                    
+                    dpa_atual = cotacao_atual * (dy_atual / 100)
+                    render_metric_row("Dividend Yield (12m)", format_perc(dy_atual))
+                    render_metric_row("DPA (12m)", format_brl(dpa_atual))
+                    
+                    # Key dinâmica usando o ticker para resetar quando mudar a ação
+                    dy_desejado_bazin = st.number_input("Dividend Yield Desejado (%)", min_value=0.1, value=6.0, step=0.5, key=f"bazin_dy_{ticker_input}")
+                    
+                    preco_teto_bazin = dpa_atual / (dy_desejado_bazin / 100) if dy_desejado_bazin > 0 else 0
+                    margem_bazin = (preco_teto_bazin - cotacao_atual) / cotacao_atual if cotacao_atual > 0 else 0
+                    
+                    st.markdown("<hr style='border-color: #30363d; margin: 15px 0;'>", unsafe_allow_html=True)
+                    render_metric_row("Preço Teto do Bazin", format_brl(preco_teto_bazin), "metric-value-green")
+                    render_metric_row("Margem de Segurança", format_perc(margem_bazin * 100), get_color_class(margem_bazin))
 
-        # -- CARD GRAHAM --
-        with col_graham:
-            st.markdown('<div class="valuation-card">', unsafe_allow_html=True)
-            st.markdown('<div class="card-header">📈 Valuation Graham</div>', unsafe_allow_html=True)
-            
-            render_metric_row("Lucro por Ação (LPA)", format_brl(lpa))
-            render_metric_row("Valor Patrimonial (VPA)", format_brl(vpa))
-            
-            # Espaçador para manter altura simétrica com os inputs das outras colunas
-            st.write("")
-            st.write("")
-            st.write("")
-            st.write("")
-            
-            if vpa > 0 and lpa > 0:
-                vi_graham = math.sqrt(22.5 * lpa * vpa)
-                margem_graham = (vi_graham - cotacao_atual) / cotacao_atual if cotacao_atual > 0 else 0
-            else:
-                vi_graham = 0
-                margem_graham = 0
+            # -- CARD GRAHAM --
+            with col_graham:
+                with st.container(border=True):
+                    st.markdown('<h4>📈 Valuation Graham</h4>', unsafe_allow_html=True)
+                    
+                    render_metric_row("Lucro por Ação (LPA)", format_brl(lpa))
+                    render_metric_row("Valor Patrimonial (VPA)", format_brl(vpa))
+                    
+                    st.write("")
+                    st.write("")
+                    st.write("")
+                    st.write("")
+                    
+                    if vpa > 0 and lpa > 0:
+                        vi_graham = math.sqrt(22.5 * lpa * vpa)
+                        margem_graham = (vi_graham - cotacao_atual) / cotacao_atual if cotacao_atual > 0 else 0
+                    else:
+                        vi_graham = 0
+                        margem_graham = 0
+                        
+                    st.markdown("<hr style='border-color: #30363d; margin: 15px 0;'>", unsafe_allow_html=True)
+                    if vpa > 0 and lpa > 0:
+                        render_metric_row("Preço Teto do Graham", format_brl(vi_graham), "metric-value-green")
+                        render_metric_row("Margem de Segurança", format_perc(margem_graham * 100), get_color_class(margem_graham))
+                    else:
+                        st.warning("VPA ou LPA negativos impedem o cálculo.")
                 
-            st.markdown("<hr style='border-color: #30363d; margin: 15px 0;'>", unsafe_allow_html=True)
-            if vpa > 0 and lpa > 0:
-                render_metric_row("Preço Teto do Graham", format_brl(vi_graham), "metric-value-green")
-                render_metric_row("Margem de Segurança", format_perc(margem_graham * 100), get_color_class(margem_graham))
-            else:
-                st.warning("VPA ou LPA negativos impedem o cálculo.")
-                
-            st.markdown('</div>', unsafe_allow_html=True)
-            
-        # -- CARD PETER LYNCH --
-        with col_lynch:
-            st.markdown('<div class="valuation-card">', unsafe_allow_html=True)
-            st.markdown('<div class="card-header">🚀 Valuation Peter Lynch</div>', unsafe_allow_html=True)
-            
-            render_metric_row("P/L", f"{pl:.2f}")
-            render_metric_row("ROE", format_perc(roe))
-            
-            crescimento_lynch = st.number_input("Crescimento Projetivo (%)", value=3.0, step=0.5, key="lynch_crescimento")
-            
-            if pl > 0:
-                ind_lynch = (dy_atual + crescimento_lynch) / pl
-                classif_lynch, cor_lynch = classificar_lynch(ind_lynch)
-            else:
-                ind_lynch = 0
-                classif_lynch, cor_lynch = "Inaplicável", "red"
-                
-            st.markdown("<hr style='border-color: #30363d; margin: 15px 0;'>", unsafe_allow_html=True)
-            if pl > 0:
-                render_metric_row("Indicador Peter Lynch", f"{ind_lynch:.2f}")
-                render_metric_row("Classificação", classif_lynch, f"metric-value-{cor_lynch}")
-            else:
-                st.warning("P/L negativo ou zero impede o cálculo.")
-                
-            st.markdown('</div>', unsafe_allow_html=True)
+            # -- CARD PETER LYNCH --
+            with col_lynch:
+                with st.container(border=True):
+                    st.markdown('<h4>🚀 Valuation Peter Lynch</h4>', unsafe_allow_html=True)
+                    
+                    render_metric_row("P/L", f"{pl:.2f}")
+                    render_metric_row("ROE", format_perc(roe))
+                    
+                    # Key dinâmica
+                    crescimento_lynch = st.number_input("Crescimento Projetivo (%)", value=3.0, step=0.5, key=f"lynch_cresc_{ticker_input}")
+                    
+                    if pl > 0:
+                        ind_lynch = (dy_atual + crescimento_lynch) / pl
+                        classif_lynch, cor_lynch = classificar_lynch(ind_lynch)
+                    else:
+                        ind_lynch = 0
+                        classif_lynch, cor_lynch = "Inaplicável", "red"
+                        
+                    st.markdown("<hr style='border-color: #30363d; margin: 15px 0;'>", unsafe_allow_html=True)
+                    if pl > 0:
+                        render_metric_row("Indicador Peter Lynch", f"{ind_lynch:.2f}")
+                        render_metric_row("Classificação", classif_lynch, f"metric-value-{cor_lynch}")
+                    else:
+                        st.warning("P/L negativo ou zero impede o cálculo.")
 
-        st.markdown("<br>", unsafe_allow_html=True)
-
-        # ---------------------------------------------------------
-        # GRID LINHA 2: PREÇO TETO PROJETIVO E DAMODARAN
-        # ---------------------------------------------------------
-        col_proj_in, col_proj_out, col_damo = st.columns([1, 1, 1])
-        
-        # Pega lucro histórico se houver
-        if df_hist_ni is not None and not df_hist_ni.empty:
-            ultimo_ll_proj_base = float(df_hist_ni['Lucro Líquido'].iloc[-1])
-        else:
-            ultimo_ll_proj_base = 0.0
-            
-        payout_padrao_proj = payout_medio_hist if payout_medio_hist is not None else 50.0
-
-        # -- CARD PREÇO TETO (INPUTS) --
-        with col_proj_in:
-            st.markdown('<div class="valuation-card">', unsafe_allow_html=True)
-            st.markdown('<div class="card-header">⚙️ Preço Teto Projetivo</div>', unsafe_allow_html=True)
-            
-            dy_proj = st.number_input("Dividend Yield Desejado (%)", value=6.0, step=0.5, key="proj_dy")
-            payout_proj = st.number_input("Payout da Empresa (%)", value=round(payout_padrao_proj, 2), step=1.0, key="proj_payout")
-            lucro_proj = st.number_input("Lucro Líquido Projetado (R$)", value=round(ultimo_ll_proj_base, 0), step=10_000_000.0, format="%.0f", key="proj_lucro")
-            
             st.markdown("<br>", unsafe_allow_html=True)
-            if st.button("💾 Salvar Cenário Atual"):
-                # Cálculo rápido para salvar
-                lpa_p = lucro_proj / num_acoes if num_acoes > 0 else 0
-                dpa_p = lpa_p * (payout_proj / 100)
-                teto_p = dpa_p / (dy_proj / 100) if dy_proj > 0 else 0
-                margem_p = (teto_p - cotacao_atual) / cotacao_atual if cotacao_atual > 0 else 0
-                yield_p = (dpa_p / cotacao_atual) * 100 if cotacao_atual > 0 else 0
+
+            # ---------------------------------------------------------
+            # GRID LINHA 2: PREÇO TETO PROJETIVO
+            # ---------------------------------------------------------
+            col_proj_in, col_proj_out = st.columns([1, 1])
+            
+            if df_hist_ni is not None and not df_hist_ni.empty:
+                ultimo_ll_proj_base = float(df_hist_ni['Lucro Líquido'].iloc[-1])
+            else:
+                ultimo_ll_proj_base = 0.0
                 
-                cenario = {
-                    "Ativo": ticker_input,
-                    "Preço Teto": teto_p,
-                    "Margem": margem_p * 100,
-                    "Yield Proj": yield_p
-                }
-                st.session_state.cenarios_salvos.append(cenario)
-                
+            payout_padrao_proj = payout_medio_hist if payout_medio_hist is not None else 50.0
+
+            # -- CARD PREÇO TETO (INPUTS) --
+            with col_proj_in:
+                with st.container(border=True):
+                    st.markdown('<h4>⚙️ Preço Teto Projetivo (Inputs)</h4>', unsafe_allow_html=True)
+                    
+                    # Keys dinâmicas para resetarem com o ticker
+                    dy_proj = st.number_input("Dividend Yield Desejado (%)", value=6.0, step=0.5, key=f"proj_dy_{ticker_input}")
+                    payout_proj = st.number_input("Payout da Empresa (%)", value=round(payout_padrao_proj, 2), step=1.0, key=f"proj_payout_{ticker_input}")
+                    lucro_proj = st.number_input("Lucro Líquido Projetado (R$)", value=round(ultimo_ll_proj_base, 0), step=10_000_000.0, format="%.0f", key=f"proj_lucro_{ticker_input}")
+                    
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    if st.button("💾 Salvar Cenário Atual"):
+                        lpa_p = lucro_proj / num_acoes if num_acoes > 0 else 0
+                        dpa_p = lpa_p * (payout_proj / 100)
+                        teto_p = dpa_p / (dy_proj / 100) if dy_proj > 0 else 0
+                        margem_p = (teto_p - cotacao_atual) / cotacao_atual if cotacao_atual > 0 else 0
+                        yield_p = (dpa_p / cotacao_atual) * 100 if cotacao_atual > 0 else 0
+                        
+                        cenario = {
+                            "Ativo": ticker_input,
+                            "Preço Teto": teto_p,
+                            "Margem (%)": margem_p * 100,
+                            "Yield Proj (%)": yield_p,
+                            "Lucro Proj": lucro_proj,
+                            "Payout": payout_proj,
+                            "Cotação": cotacao_atual
+                        }
+                        st.session_state.cenarios_salvos.append(cenario)
+                        st.toast("Cenário salvo!")
+
+            # -- CARD PREÇO TETO (OUTPUTS) --
+            with col_proj_out:
+                with st.container(border=True):
+                    st.markdown('<h4>📊 Resultados Projetivos</h4>', unsafe_allow_html=True)
+                    if num_acoes > 0:
+                        lpa_proj_out = lucro_proj / num_acoes
+                        dpa_proj_out = lpa_proj_out * (payout_proj / 100)
+                        preco_teto_proj_out = dpa_proj_out / (dy_proj / 100) if dy_proj > 0 else 0
+                        margem_teto_proj_out = (preco_teto_proj_out - cotacao_atual) / cotacao_atual if cotacao_atual > 0 else 0
+                        yield_proj_cotacao_out = (dpa_proj_out / cotacao_atual) * 100 if cotacao_atual > 0 else 0
+                        
+                        render_metric_row("Cotação Atual", format_brl(cotacao_atual))
+                        render_metric_row("Número de Papéis", f"{int(num_acoes):,}".replace(",", "."))
+                        st.markdown("<hr style='border-color: #30363d; margin: 10px 0;'>", unsafe_allow_html=True)
+                        
+                        render_metric_row("DPA Projetivo", format_brl(dpa_proj_out))
+                        render_metric_row("Preço Teto", format_brl(preco_teto_proj_out), "metric-value-green")
+                        render_metric_row("Yield (Projetivo)", format_perc(yield_proj_cotacao_out), get_color_class(yield_proj_cotacao_out - dy_proj))
+                        render_metric_row("Margem Segurança", format_perc(margem_teto_proj_out * 100), get_color_class(margem_teto_proj_out))
+                    else:
+                        st.error("Número de ações inválido ou não disponível no StatusInvest.")
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            
+            # ---------------------------------------------------------
+            # CENÁRIOS SALVOS (Expandido e com melhor visualização)
+            # ---------------------------------------------------------
             if len(st.session_state.cenarios_salvos) > 0:
-                with st.expander("Ver cenários salvos"):
-                    st.dataframe(pd.DataFrame(st.session_state.cenarios_salvos))
-                    if st.button("Limpar Histórico"):
+                with st.container(border=True):
+                    st.markdown('<h4>📋 Histórico de Cenários Salvos</h4>', unsafe_allow_html=True)
+                    df_cenarios = pd.DataFrame(st.session_state.cenarios_salvos)
+                    
+                    # Formatando para visualização
+                    df_view = df_cenarios.copy()
+                    cols_moeda = ["Preço Teto", "Lucro Proj", "Cotação"]
+                    cols_perc = ["Margem (%)", "Yield Proj (%)", "Payout"]
+                    
+                    for col in cols_moeda:
+                        if col in df_view.columns:
+                            df_view[col] = df_view[col].apply(lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+                    for col in cols_perc:
+                        if col in df_view.columns:
+                            df_view[col] = df_view[col].apply(lambda x: f"{x:.2f}%")
+                            
+                    st.dataframe(df_view, hide_index=True, use_container_width=True)
+                    
+                    if st.button("🗑️ Limpar Histórico"):
                         st.session_state.cenarios_salvos = []
                         st.rerun()
 
-            st.markdown('</div>', unsafe_allow_html=True)
-
-        # -- CARD PREÇO TETO (OUTPUTS) --
-        with col_proj_out:
-            st.markdown('<div class="valuation-card" style="display:flex; flex-direction:column; justify-content:center;">', unsafe_allow_html=True)
-            
-            if num_acoes > 0:
-                lpa_proj_out = lucro_proj / num_acoes
-                dpa_proj_out = lpa_proj_out * (payout_proj / 100)
-                preco_teto_proj_out = dpa_proj_out / (dy_proj / 100) if dy_proj > 0 else 0
-                margem_teto_proj_out = (preco_teto_proj_out - cotacao_atual) / cotacao_atual if cotacao_atual > 0 else 0
-                yield_proj_cotacao_out = (dpa_proj_out / cotacao_atual) * 100 if cotacao_atual > 0 else 0
-                
-                render_metric_row("Cotação Atual", format_brl(cotacao_atual))
-                render_metric_row("Número de Papéis", f"{int(num_acoes):,}".replace(",", "."))
-                st.markdown("<hr style='border-color: #30363d; margin: 10px 0;'>", unsafe_allow_html=True)
-                
-                render_metric_row("DPA Projetivo", format_brl(dpa_proj_out))
-                render_metric_row("Preço Teto", format_brl(preco_teto_proj_out), "metric-value-green")
-                render_metric_row("Yield (Projetivo)", format_perc(yield_proj_cotacao_out), get_color_class(yield_proj_cotacao_out - dy_proj))
-                render_metric_row("Margem Segurança", format_perc(margem_teto_proj_out * 100), get_color_class(margem_teto_proj_out))
-            else:
-                st.error("Número de ações inválido ou não disponível no StatusInvest.")
-                
-            st.markdown('</div>', unsafe_allow_html=True)
-
-        # -- CARD DAMODARAN (FLUXO DE CAIXA / LUCRO DESCONTADO) --
-        with col_damo:
-            st.markdown('<div class="valuation-card">', unsafe_allow_html=True)
-            st.markdown('<div class="card-header">💸 Valuation Fluxo de Caixa</div>', unsafe_allow_html=True)
+        # ---------------------------------------------------------
+        # ABA DAMODARAN
+        # ---------------------------------------------------------
+        with tab_damo:
+            st.markdown('<h3>💸 Valuation Fluxo de Caixa (Damodaran)</h3>', unsafe_allow_html=True)
             
             if not tem_dados_damodaran:
-                st.warning("Sem dados históricos (Yahoo Finance) para projetar o Fluxo.")
+                st.warning("Sem dados históricos (Yahoo Finance) para projetar o Fluxo de Caixa.")
             else:
                 st.markdown("""
                 Este modelo projeta o Lucro Líquido descontado a valor presente, estimando o **Preço Justo** (Damodaran).
                 """)
                 
-                with st.expander("Abrir Calculadora Damodaran", expanded=False):
-                    ano_atual = datetime.now().year
-                    anos_projetados = [ano_atual + i for i in range(1, 4)]
-                    
-                    st.markdown("**Parâmetros Globais**")
-                    taxa_desc = st.number_input("Taxa de Desconto (%)", value=selic_padrao, step=0.1, key="damo_desc") / 100
-                    taxa_perp = st.number_input("Taxa Perpetuidade (%)", value=2.0, step=0.1, key="damo_perp") / 100
-                    
-                    payout_damo = st.number_input("Payout (%)", value=round(payout_padrao_proj, 2), key="damo_payout")
-                    ll_atual = st.number_input("Lucro Ano Atual", value=round(ultimo_ll_proj_base, 0), step=1_000_000.0, key="damo_ll")
-                    
-                    payout_dec = payout_damo / 100
-                    g_calc = (1 - payout_dec) * roe
-                    st.caption(f"**Taxa Cresc.(g) Calculada:** {g_calc:.2f}% (usado para projetar os CAGRs abaixo)")
-                    
-                    state_key_cagr = f"cagrs_{ticker_input}"
-                    if state_key_cagr not in st.session_state:
-                        st.session_state[state_key_cagr] = {ano: round(g_calc, 2) for ano in anos_projetados}
+                ano_atual = datetime.now().year
+                anos_projetados = [ano_atual + i for i in range(1, 4)]
+                
+                col_d1, col_d2 = st.columns([1, 2])
+                
+                with col_d1:
+                    with st.container(border=True):
+                        st.markdown("**Parâmetros Globais**")
+                        taxa_desc = st.number_input("Taxa de Desconto (%)", value=selic_padrao, step=0.1, key=f"damo_desc_{ticker_input}") / 100
+                        taxa_perp = st.number_input("Taxa Perpetuidade (%)", value=2.0, step=0.1, key=f"damo_perp_{ticker_input}") / 100
                         
-                    df_ed = pd.DataFrame({'Ano': anos_projetados, 'CAGR (%)': [st.session_state[state_key_cagr][a] for a in anos_projetados]})
-                    df_ed = st.data_editor(df_ed, hide_index=True, use_container_width=True, key="damo_editor")
-                    
-                    for _, r in df_ed.iterrows():
-                        st.session_state[state_key_cagr][int(r['Ano'])] = float(r['CAGR (%)'])
+                        payout_damo = st.number_input("Payout (%)", value=round(payout_padrao_proj, 2), key=f"damo_payout_{ticker_input}")
+                        ll_atual = st.number_input("Lucro Ano Atual", value=round(ultimo_ll_proj_base, 0), step=1_000_000.0, key=f"damo_ll_{ticker_input}")
                         
+                        payout_dec = payout_damo / 100
+                        g_calc = (1 - payout_dec) * roe
+                        st.caption(f"**Taxa Cresc.(g) Calculada:** {g_calc:.2f}% (usado para projetar os CAGRs)")
+                        
+                with col_d2:
+                    with st.container(border=True):
+                        st.markdown("**Projeções de CAGR Anuais (%)**")
+                        state_key_cagr = f"cagrs_{ticker_input}"
+                        if state_key_cagr not in st.session_state:
+                            st.session_state[state_key_cagr] = {ano: round(g_calc, 2) for ano in anos_projetados}
+                            
+                        df_ed = pd.DataFrame({'Ano': anos_projetados, 'CAGR (%)': [st.session_state[state_key_cagr][a] for a in anos_projetados]})
+                        df_ed = st.data_editor(df_ed, hide_index=True, use_container_width=True, key=f"damo_editor_{ticker_input}")
+                        
+                        for _, r in df_ed.iterrows():
+                            st.session_state[state_key_cagr][int(r['Ano'])] = float(r['CAGR (%)'])
+                
+                st.markdown("<br>", unsafe_allow_html=True)
+                
+                with st.container(border=True):
                     # Cálculos
                     ll_proj = []
                     vpls = []
@@ -486,7 +502,7 @@ if ticker_input:
                         vpls.append(curr_ll / ((1 + taxa_desc) ** (idx + 1)))
                         
                     if taxa_desc <= taxa_perp:
-                        st.error("Desconto deve ser > Perpetuidade.")
+                        st.error("A Taxa de Desconto deve ser maior que a Perpetuidade.")
                     else:
                         tv = ll_proj[-1] * (1 + taxa_perp) / (taxa_desc - taxa_perp)
                         vpl_perp = tv / ((1 + taxa_desc) ** len(anos_projetados))
@@ -495,8 +511,11 @@ if ticker_input:
                         preco_justo_damo = mkt_cap_damo / num_acoes if num_acoes > 0 else 0
                         margem_damo = (preco_justo_damo - cotacao_atual) / cotacao_atual if cotacao_atual > 0 else 0
                         
-                        st.markdown("<hr style='border-color: #30363d; margin: 10px 0;'>", unsafe_allow_html=True)
-                        render_metric_row("Preço Justo (DCF)", format_brl(preco_justo_damo), "metric-value-green")
-                        render_metric_row("Upside / Downside", format_perc(margem_damo * 100), get_color_class(margem_damo))
-            
-            st.markdown('</div>', unsafe_allow_html=True)
+                        c_r1, c_r2, c_r3 = st.columns(3)
+                        
+                        with c_r1:
+                            render_metric_row("Cotação Atual", format_brl(cotacao_atual))
+                        with c_r2:
+                            render_metric_row("Preço Justo (DCF)", format_brl(preco_justo_damo), "metric-value-green")
+                        with c_r3:
+                            render_metric_row("Upside / Downside", format_perc(margem_damo * 100), get_color_class(margem_damo))
