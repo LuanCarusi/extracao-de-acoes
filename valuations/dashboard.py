@@ -6,6 +6,7 @@ import math
 import os
 import sys
 import subprocess
+import json
 from utils import fetch_statusinvest_data, get_selic
 from datetime import datetime
 
@@ -117,8 +118,23 @@ local_css()
 
 # Funções de Cache e Utilidades
 
+CENARIOS_FILE = "cenarios_salvos.json"
+
+def load_cenarios():
+    if os.path.exists(CENARIOS_FILE):
+        try:
+            with open(CENARIOS_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except:
+            return []
+    return []
+
+def save_cenarios(cenarios):
+    with open(CENARIOS_FILE, "w", encoding="utf-8") as f:
+        json.dump(cenarios, f, indent=4, ensure_ascii=False)
+
 if 'cenarios_salvos' not in st.session_state:
-    st.session_state.cenarios_salvos = []
+    st.session_state.cenarios_salvos = load_cenarios()
 
 @st.cache_data(ttl=3600)
 def get_statusinvest_db():
@@ -425,6 +441,7 @@ if ticker_input:
                             "Cotação": cotacao_atual
                         }
                         st.session_state.cenarios_salvos.append(cenario)
+                        save_cenarios(st.session_state.cenarios_salvos)
                         st.toast("Cenário salvo!")
 
             # -- CARD PREÇO TETO (OUTPUTS) --
@@ -494,9 +511,21 @@ if ticker_input:
                     # Renderiza a tabela já com ordenação numérica funcionando e colorida
                     st.dataframe(df_estilizado, hide_index=True, use_container_width=True)
                     
-                    if st.button("🗑️ Limpar Histórico"):
-                        st.session_state.cenarios_salvos = []
-                        st.rerun()
+                    col_b1, col_b2, _ = st.columns([3, 3, 4])
+                    with col_b1:
+                        if st.button("🗑️ Limpar Histórico", use_container_width=True):
+                            st.session_state.cenarios_salvos = []
+                            save_cenarios([])
+                            st.rerun()
+                    with col_b2:
+                        csv_export = df_cenarios.to_csv(index=False, sep=";", decimal=",", encoding="utf-8-sig")
+                        st.download_button(
+                            label="📥 Exportar CSV",
+                            data=csv_export,
+                            file_name="cenarios_salvos.csv",
+                            mime="text/csv",
+                            use_container_width=True
+                        )
 
         # ---------------------------------------------------------
         # ABA DAMODARAN
