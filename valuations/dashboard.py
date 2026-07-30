@@ -438,7 +438,28 @@ if ticker_input:
                         if col in df_view.columns:
                             df_view[col] = df_view[col].apply(lambda x: f"{x:.2f}%")
                             
-                    st.dataframe(df_view, hide_index=True, use_container_width=True)
+                    # Função para colorir a célula baseada no valor
+                    def colorir_margem(valor):
+                        try:
+                            # Remove o '%' para transformar de volta em número e checar o sinal
+                            val_num = float(valor.replace('%', ''))
+                            if val_num > 0:
+                                return 'color: #3fb950; font-weight: 600;' # Verde (metric-value-green)
+                            elif val_num < 0:
+                                return 'color: #f85149; font-weight: 600;' # Vermelho (metric-value-red)
+                            return ''
+                        except:
+                            return ''
+
+                    # Aplica o estilo na coluna específica (usa try/except para garantir compatibilidade com qualquer versão do Pandas)
+                    try:
+                        df_estilizado = df_view.style.map(colorir_margem, subset=["Margem (%)"])
+                    except AttributeError:
+                        # Fallback para versões do Pandas anteriores à 2.1.0
+                        df_estilizado = df_view.style.applymap(colorir_margem, subset=["Margem (%)"])
+
+                    # Renderiza o dataframe já com as regras de cores aplicadas
+                    st.dataframe(df_estilizado, hide_index=True, use_container_width=True)
                     
                     if st.button("🗑️ Limpar Histórico"):
                         st.session_state.cenarios_salvos = []
