@@ -177,6 +177,38 @@ def format_perc(val):
     if pd.isna(val) or val is None: return "-"
     return f"{val:.2f}%"
 
+def formatar_grandeza(valor):
+    if pd.isna(valor) or valor is None: 
+        return "-"
+    
+    abs_valor = abs(valor)
+    sinal = "-" if valor < 0 else ""
+    
+    if abs_valor >= 1_000_000_000_000:
+        numero = abs_valor / 1_000_000_000_000
+        sufixo = "trilhão" if numero >= 1 and numero < 2 else "trilhões"
+    elif abs_valor >= 1_000_000_000:
+        numero = abs_valor / 1_000_000_000
+        sufixo = "bilhão" if numero >= 1 and numero < 2 else "bilhões"
+    elif abs_valor >= 1_000_000:
+        numero = abs_valor / 1_000_000
+        sufixo = "milhão" if numero >= 1 and numero < 2 else "milhões"
+    elif abs_valor >= 1_000:
+        numero = abs_valor / 1_000
+        sufixo = "mil"
+    else:
+        numero = abs_valor
+        sufixo = ""
+
+    # Formata com 2 casas decimais e troca ponto por vírgula
+    num_str = f"{numero:.2f}".replace(".", ",")
+    
+    # Limpa zeros desnecessários (ex: de "13,00 bilhões" para "13 bilhões")
+    if num_str.endswith(",00"):
+        num_str = num_str[:-3]
+
+    return f"R$ {sinal}{num_str} {sufixo}".strip()
+
 def get_color_class(value, invert=False):
     if pd.isna(value): return ""
     if value > 0: return "metric-value-red" if invert else "metric-value-green"
@@ -373,7 +405,8 @@ if ticker_input:
                     dy_proj = st.number_input("Dividend Yield Desejado (%)", value=6.0, step=0.5, key=f"proj_dy_{ticker_input}")
                     payout_proj = st.number_input("Payout da Empresa (%)", value=round(payout_padrao_proj, 2), step=1.0, key=f"proj_payout_{ticker_input}")
                     lucro_proj = st.number_input("Lucro Líquido Projetado (R$)", value=round(ultimo_ll_proj_base, 0), step=10_000_000.0, format="%.0f", key=f"proj_lucro_{ticker_input}")
-                    
+                    st.caption(f"**Valor interpretado:** {formatar_grandeza(lucro_proj)}")
+
                     st.markdown("<br>", unsafe_allow_html=True)
                     if st.button("💾 Salvar Cenário Atual"):
                         lpa_p = lucro_proj / num_acoes if num_acoes > 0 else 0
@@ -491,7 +524,8 @@ if ticker_input:
                         
                         payout_damo = st.number_input("Payout (%)", value=round(payout_padrao_proj, 2), key=f"damo_payout_{ticker_input}")
                         ll_atual = st.number_input("Lucro Ano Atual", value=round(ultimo_ll_proj_base, 0), step=1_000_000.0, key=f"damo_ll_{ticker_input}")
-                        
+                        st.caption(f"**Valor interpretado:** {format_brl(ll_atual)}")
+
                         payout_dec = payout_damo / 100
                         g_calc = (1 - payout_dec) * roe
                         st.caption(f"**Taxa Cresc.(g) Calculada:** {g_calc:.2f}% (usado para projetar os CAGRs)")
