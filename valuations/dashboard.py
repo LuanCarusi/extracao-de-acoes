@@ -293,7 +293,16 @@ st.markdown("---")
 col_busca, _ = st.columns([3, 7])
 with col_busca:
     ticker_input = st.text_input("🔍 Buscar Ativo para Valuation (ex: BBSE3)", value="").strip().upper()
-
+st.markdown(
+        """
+        <div style='margin-top: -12px; margin-bottom: 15px; font-size: 0.85rem;'>
+            <a href='https://www.oceans14.com.br/acoes/agenda-resultados' target='_blank' style='color: #8b949e; text-decoration: none;'>
+                📅 Consultar Agenda de Resultados
+            </a>
+        </div>
+        """, 
+        unsafe_allow_html=True
+    )
 selic_padrao = get_taxa_selic()
 
 if ticker_input:
