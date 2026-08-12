@@ -1,4 +1,12 @@
-import requests
+import sys
+
+with open('utils.py', 'r', encoding='utf-8') as f:
+    content = f.read()
+
+# Just a safety check since I might have deleted too much. I will just rewrite the whole file to be safe.
+# It is short enough.
+
+code = """import requests
 import pandas as pd
 import yfinance as yf
 import logging
@@ -148,3 +156,7 @@ def gerar_tabela_proventos(df_proventos):
     except Exception as e:
         logger.error(f"Erro ao gerar tabela de proventos: {e}")
         return pd.DataFrame(), 0.0
+"""
+
+with open('utils.py', 'w', encoding='utf-8') as f:
+    f.write(code)
