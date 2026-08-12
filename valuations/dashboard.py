@@ -409,7 +409,7 @@ with tab_carteira:
             
             render_metric_row("Provento mensal", format_brl(prov_mensal))
 
-    st.markdown("### Proventos Pagos")
+    st.markdown("### 📅 Proventos Pagos")
     if not df_pivot_prov.empty:
         df_display = df_pivot_prov.copy()
         for col in df_display.columns:
@@ -417,6 +417,63 @@ with tab_carteira:
         st.dataframe(df_display, use_container_width=True)
     else:
         st.info("Adicione proventos para visualizar a tabela mensal.")
+
+    # ----------------------------------------------------------
+    # RENTABILIDADE MENSAL (YoC por mês)
+    # ----------------------------------------------------------
+    st.markdown("### 📈 Rentabilidade Mensal (YoC)")
+    if not st.session_state.carteira_proventos.empty and metricas['valor_aplicado'] > 0:
+        try:
+            df_yoc = st.session_state.carteira_proventos.copy()
+            df_yoc['Data'] = pd.to_datetime(df_yoc['Mês/Ano'], format='%m/%Y', errors='coerce')
+            df_yoc['Valor'] = pd.to_numeric(df_yoc['Valor'], errors='coerce').fillna(0.0)
+            df_yoc = df_yoc.dropna(subset=['Data'])
+
+            # Agrupa por mês e calcula YoC mensal = (proventos do mês / valor aplicado) * 100
+            df_mensal = df_yoc.groupby(df_yoc['Data'].dt.to_period('M'))['Valor'].sum().reset_index()
+            df_mensal.columns = ['Período', 'Proventos']
+            df_mensal['Período'] = df_mensal['Período'].astype(str)
+            df_mensal['YoC (%)'] = (df_mensal['Proventos'] / metricas['valor_aplicado']) * 100
+
+            # Gráfico de barras
+            import altair as alt
+            chart = alt.Chart(df_mensal).mark_bar(cornerRadiusTopLeft=4, cornerRadiusTopRight=4).encode(
+                x=alt.X('Período:O', axis=alt.Axis(labelAngle=-45, title=None)),
+                y=alt.Y('YoC (%):Q', axis=alt.Axis(title='Rentabilidade mensal (%)', format='.2f')),
+                color=alt.condition(
+                    alt.datum['YoC (%)'] > 0,
+                    alt.value('#3fb950'),
+                    alt.value('#f85149')
+                ),
+                tooltip=[
+                    alt.Tooltip('Período:O', title='Mês'),
+                    alt.Tooltip('Proventos:Q', title='Proventos (R$)', format=',.2f'),
+                    alt.Tooltip('YoC (%):Q', title='YoC (%)', format='.4f')
+                ]
+            ).properties(
+                height=260
+            ).configure_view(
+                strokeWidth=0
+            ).configure_axis(
+                grid=False,
+                labelColor='#8b949e',
+                titleColor='#8b949e'
+            ).configure_bar(
+                color='#3fb950'
+            )
+            st.altair_chart(chart, use_container_width=True)
+
+            # Tabela de rentabilidade mensal
+            with st.expander("📋 Ver tabela de rentabilidade por mês"):
+                df_mensal_view = df_mensal.copy()
+                df_mensal_view['Proventos'] = df_mensal_view['Proventos'].apply(format_brl)
+                df_mensal_view['YoC (%)'] = df_mensal_view['YoC (%)'].apply(format_perc)
+                df_mensal_view = df_mensal_view.rename(columns={'Proventos': 'Proventos (R$)'})
+                st.dataframe(df_mensal_view, hide_index=True, use_container_width=True)
+        except Exception as e:
+            st.warning(f"Não foi possível gerar o gráfico de rentabilidade: {e}")
+    else:
+        st.info("Preencha a carteira para visualizar a rentabilidade mensal.")
         
     st.markdown("---")
     with st.container(border=True):
